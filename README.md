@@ -1,6 +1,6 @@
 # CTH-OnlineJudge
 
-CTH-OnlineJudge（CTHOJ）是一个面向算法训练、程序设计竞赛和测试数据工程的在线评测系统。项目包含题库、真实代码评测、比赛、排行榜、评论治理、通知、管理员后台和测试数据实验室，可在 Windows、Linux 与 macOS 上开发，并支持部署到 Linux 服务器。
+CTH-OnlineJudge（CTHOJ）是一个面向算法训练、程序设计竞赛和测试数据工程的在线评测系统。项目包含题库、真实代码评测、比赛、排行榜、评论治理、通知、管理员后台和测试数据实验室，可在 Windows、Linux上开发，并支持部署到 Linux 服务器。实测服务端可部署在最低配置为2核2GB内存的Linux服务器上（低并发）。
 
 ## 功能
 
@@ -12,7 +12,7 @@ CTH-OnlineJudge（CTHOJ）是一个面向算法训练、程序设计竞赛和测
 - 独立比赛排行榜与比赛题目访问控制
 - 题目评论、违禁词、账号封禁和管理员权限管理
 - 站内通知、审计记录和内容治理
-- 测试数据生成、校验、对拍、反例缩小和完整数据导出
+- AI生成测试数据、校验、对拍、反例缩小和完整数据导出
 - 可选的 OpenAI-compatible 模型接口，密钥仅由服务端读取
 
 ## 技术结构
@@ -50,7 +50,7 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-Linux/macOS：
+Linux：
 
 ```bash
 cp .env.example .env
@@ -257,14 +257,6 @@ npm run typecheck
 npm run lint
 npm test
 ```
-
-## 文档
-
-- [系统架构](docs/ARCHITECTURE.md)
-- [API](docs/API.md)
-- [基础设施与 Judge0](docs/INFRASTRUCTURE.md)
-- [安全设计](docs/SECURITY.md)
-- [开发计划](docs/DEVELOPMENT_PLAN.md)
 
 ## License
 
