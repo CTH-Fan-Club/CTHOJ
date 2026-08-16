@@ -19,3 +19,9 @@ test('sidebar does not expose API or judge provider status', () => {
   assert.doesNotMatch(html, /API 服务正常|判题环境检查中|judge-provider/);
   assert.doesNotMatch(script, /Judge0 已配置|开发 Mock 判题|judge-provider/);
 });
+
+test('browser tab uses the product name', () => {
+  const html = readFileSync('apps/web/public/index.html', 'utf8');
+  assert.match(html, /<title>CTH-OnlineJudge<\/title>/);
+  assert.doesNotMatch(html, /<title>工作台\s*\|\s*CTHOJ<\/title>/);
+});
