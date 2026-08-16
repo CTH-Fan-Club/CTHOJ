@@ -1,0 +1,22 @@
+{
+  "name": "cthoj",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CTH-OnlineJudge / CTHOJ development workspace",
+  "scripts": {
+    "dev": "node apps/api/src/server.mjs",
+    "start": "node apps/api/src/server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "lint": "node scripts/lint.mjs",
+    "typecheck": "node scripts/typecheck.mjs",
+    "infra:init": "powershell -ExecutionPolicy Bypass -File scripts/infra-init.ps1",
+    "infra:up": "powershell -ExecutionPolicy Bypass -File scripts/infra-up.ps1 -Role all",
+    "infra:down": "powershell -ExecutionPolicy Bypass -File scripts/infra-down.ps1 -Role all",
+    "infra:backup": "powershell -ExecutionPolicy Bypass -File scripts/infra-backup.ps1",
+    "infra:export": "powershell -ExecutionPolicy Bypass -File scripts/export-server-bundle.ps1",
+    "judge:smoke": "powershell -ExecutionPolicy Bypass -File scripts/judge0-smoke.ps1",
+    "judge:configure-local": "powershell -ExecutionPolicy Bypass -File scripts/configure-local-judge0.ps1"
+  },
+  "workspaces": ["apps/*", "packages/*"],
+  "engines": { "node": ">=20" }
+}

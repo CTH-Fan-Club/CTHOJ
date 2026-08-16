@@ -1,0 +1,25 @@
+.env
+.env.*
+!.env.example
+!infra/.env.infrastructure.example
+
+infra/.env.infrastructure
+infra/runtime/
+
+data/
+backups/
+artifacts/
+logs/
+temp/
+coverage/
+node_modules/
+
+*.log
+*.pid
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local engineering instructions are not part of the distributed project.
+AGENTS.md

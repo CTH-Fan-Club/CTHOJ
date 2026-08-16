@@ -1,0 +1,6 @@
+{
+  "name": "@cthoj/worker",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "node src/worker.mjs" }
+}

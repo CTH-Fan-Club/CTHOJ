@@ -1,0 +1,430 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName { USER SETTER ADMIN SUPER_ADMIN }
+enum SubmissionStatus { PENDING QUEUED COMPILING RUNNING ACCEPTED WRONG_ANSWER TIME_LIMIT_EXCEEDED MEMORY_LIMIT_EXCEEDED RUNTIME_ERROR COMPILE_ERROR OUTPUT_LIMIT_EXCEEDED PRESENTATION_ERROR SYSTEM_ERROR CANCELLED }
+enum ArtifactKind { SOURCE GENERATOR VALIDATOR CHECKER STANDARD BRUTE WRONG_SOLUTION TESTDATA REPORT }
+enum RunStatus { PENDING RUNNING COMPLETED FAILED CANCELLED NEEDS_REVIEW }
+enum ContestRule { ACM OI IOI }
+enum ScoreboardMode { LIVE FROZEN ROLLING FINAL }
+
+model User {
+  id            String       @id @default(cuid())
+  username      String       @unique
+  email         String       @unique
+  passwordHash  String
+  displayName   String
+  rating        Int          @default(1200)
+  roles         UserRole[]
+  refreshTokens RefreshToken[]
+  submissions   Submission[]
+  skills        UserSkill[]
+  aiUsage       AiUsage[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+}
+
+model Role {
+  id    String     @id @default(cuid())
+  name  RoleName   @unique
+  users UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  @@id([userId, roleId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@index([userId, expiresAt])
+}
+
+model Problem {
+  id           String           @id @default(cuid())
+  number       Int              @unique
+  slug         String           @unique
+  title        String
+  difficulty   String
+  statement    String
+  inputFormat  String
+  outputFormat String
+  timeLimitMs  Int
+  memoryLimitMb Int
+  published    Boolean          @default(false)
+  version      Int              @default(1)
+  versions     ProblemVersion[]
+  tags         ProblemTag[]
+  samples      Sample[]
+  testGroups   TestGroup[]
+  submissions  Submission[]
+  contestLinks ContestProblem[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  deletedAt    DateTime?
+  @@index([published, difficulty])
+}
+
+model ProblemVersion {
+  id        String   @id @default(cuid())
+  problemId String
+  version   Int
+  snapshot  Json
+  problem   Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([problemId, version])
+}
+
+model Tag {
+  id       String       @id @default(cuid())
+  slug     String       @unique
+  name     String       @unique
+  problems ProblemTag[]
+}
+
+model ProblemTag {
+  problemId String
+  tagId     String
+  problem   Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  @@id([problemId, tagId])
+}
+
+model Sample {
+  id          String  @id @default(cuid())
+  problemId   String
+  input       String
+  output      String
+  explanation String?
+  order       Int
+  problem     Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  @@unique([problemId, order])
+}
+
+model TestGroup {
+  id        String     @id @default(cuid())
+  problemId String
+  name      String
+  score     Int        @default(0)
+  order     Int
+  problem   Problem    @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  cases     TestCase[]
+}
+
+model TestCase {
+  id           String    @id @default(cuid())
+  testGroupId  String
+  inputKey     String
+  outputKey    String
+  inputHash    String
+  outputHash   String
+  order        Int
+  testGroup    TestGroup @relation(fields: [testGroupId], references: [id], onDelete: Cascade)
+  judgingCases JudgingCase[]
+  @@unique([testGroupId, order])
+}
+
+model ProgramArtifact {
+  id         String       @id @default(cuid())
+  kind       ArtifactKind
+  language   String
+  objectKey  String
+  sha256     String
+  size       Int
+  createdBy  String
+  version    Int          @default(1)
+  createdAt  DateTime     @default(now())
+  @@index([kind, createdBy])
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  userId       String
+  problemId    String
+  contestId    String?
+  language     String
+  sourceKey    String
+  sourceHash   String
+  status       SubmissionStatus @default(PENDING)
+  score        Int              @default(0)
+  timeMs       Int?
+  memoryKb     Int?
+  compileInfo  String?
+  publicCode   Boolean          @default(false)
+  user         User             @relation(fields: [userId], references: [id])
+  problem      Problem          @relation(fields: [problemId], references: [id])
+  contest      Contest?         @relation(fields: [contestId], references: [id])
+  judging      Judging?
+  createdAt    DateTime         @default(now())
+  @@index([userId, createdAt])
+  @@index([problemId, status])
+}
+
+model Judging {
+  id           String        @id @default(cuid())
+  submissionId String        @unique
+  provider     String
+  providerToken String?
+  attempt      Int           @default(1)
+  cases        JudgingCase[]
+  submission   Submission    @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model JudgingCase {
+  id         String           @id @default(cuid())
+  judgingId  String
+  testCaseId String
+  status     SubmissionStatus
+  timeMs     Int?
+  memoryKb   Int?
+  message    String?
+  judging    Judging          @relation(fields: [judgingId], references: [id], onDelete: Cascade)
+  testCase   TestCase         @relation(fields: [testCaseId], references: [id])
+  @@unique([judgingId, testCaseId])
+}
+
+model Contest {
+  id                    String                @id @default(cuid())
+  title                 String
+  description           String                @default("")
+  rule                  ContestRule           @default(ACM)
+  startsAt              DateTime
+  endsAt                DateTime
+  durationMinutes       Int
+  freezeMinutes         Int                   @default(0)
+  manualFreezeAt        DateTime?
+  scoreboardMode        ScoreboardMode        @default(LIVE)
+  revealedSubmissionIds Json                  @default("[]")
+  participantBase       Int                   @default(0)
+  passwordHash          String?
+  public                Boolean               @default(true)
+  aiPolicy              String
+  problems              ContestProblem[]
+  registrations         ContestRegistration[]
+  standings             ContestStanding[]
+  submissions           Submission[]
+  createdAt             DateTime              @default(now())
+}
+
+model ContestProblem {
+  contestId String
+  problemId String
+  label     String
+  order     Int
+  contest   Contest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  problem   Problem @relation(fields: [problemId], references: [id])
+  @@id([contestId, problemId])
+}
+
+model ContestRegistration {
+  id        String   @id @default(cuid())
+  contestId String
+  userId    String
+  contest   Contest  @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([contestId, userId])
+}
+
+model ContestStanding {
+  id        String  @id @default(cuid())
+  contestId String
+  userId    String
+  solved    Int     @default(0)
+  penalty   Int     @default(0)
+  rank      Int?
+  detail    Json
+  contest   Contest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  @@unique([contestId, userId])
+}
+
+model HintSession {
+  id        String        @id @default(cuid())
+  userId    String
+  problemId String
+  contestId String?
+  maxLevel  Int           @default(1)
+  messages  HintMessage[]
+  createdAt DateTime      @default(now())
+}
+
+model HintMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  level     Int
+  content   String
+  tokens    Int         @default(0)
+  session   HintSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+}
+
+model AiAnalysis {
+  id            String    @id @default(cuid())
+  userId        String?
+  submissionId  String?
+  type          String
+  model         String
+  promptVersion String
+  inputHash     String
+  result        Json
+  createdAt     DateTime  @default(now())
+  @@index([userId, createdAt])
+}
+
+model AiUsage {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
+  @@index([userId, createdAt])
+}
+
+model UserSkill {
+  id        String   @id @default(cuid())
+  userId    String
+  tag       String
+  attempts  Int      @default(0)
+  accepted  Int      @default(0)
+  mastery   Float    @default(0)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  @@unique([userId, tag])
+}
+
+model ErrorPattern {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  count     Int      @default(1)
+  metadata  Json?
+  updatedAt DateTime @updatedAt
+  @@unique([userId, type])
+}
+
+model DataLabProject {
+  id          String            @id @default(cuid())
+  title       String
+  problemId   String?
+  createdBy   String
+  version     Int               @default(1)
+  runs        DataLabRun[]
+  artifacts   DataLabArtifact[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime?
+}
+
+model DataLabRun {
+  id          String           @id @default(cuid())
+  projectId   String
+  type        String
+  status      RunStatus        @default(PENDING)
+  progress    Int              @default(0)
+  seed        String?
+  config      Json
+  result      Json?
+  project     DataLabProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  findings    DataLabFinding[]
+  report      DataAuditReport?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  @@index([projectId, createdAt])
+}
+
+model DataLabArtifact {
+  id        String         @id @default(cuid())
+  projectId String
+  kind      ArtifactKind
+  objectKey String
+  sha256    String
+  version   Int
+  project   DataLabProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+  @@unique([projectId, kind, version])
+}
+
+model DataLabFinding {
+  id        String     @id @default(cuid())
+  runId     String
+  severity  String
+  type      String
+  summary   String
+  evidence  Json
+  resolved  Boolean    @default(false)
+  run       DataLabRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+}
+
+model GeneratorVersion {
+  id            String   @id @default(cuid())
+  projectId     String
+  version       Int
+  artifactId    String
+  promptVersion String?
+  seed          String?
+  createdAt     DateTime @default(now())
+  @@unique([projectId, version])
+}
+
+model ValidatorVersion {
+  id         String   @id @default(cuid())
+  projectId  String
+  version    Int
+  artifactId String
+  createdAt  DateTime @default(now())
+  @@unique([projectId, version])
+}
+
+model CheckerVersion {
+  id         String   @id @default(cuid())
+  projectId  String
+  version    Int
+  artifactId String
+  createdAt  DateTime @default(now())
+  @@unique([projectId, version])
+}
+
+model DataAuditReport {
+  id          String     @id @default(cuid())
+  runId       String     @unique
+  report      Json
+  approvedBy  String?
+  approvedAt  DateTime?
+  run         DataLabRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  requestId  String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+}

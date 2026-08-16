@@ -1,0 +1,55 @@
+name: cthoj
+services:
+  api:
+    build: .
+    container_name: cthoj-api
+    environment:
+      PORT: 3000
+      DATA_FILE: /app/data/cthoj.json
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      CTHOJ_ADMIN_PASSWORD: ${CTHOJ_ADMIN_PASSWORD:?set CTHOJ_ADMIN_PASSWORD in .env}
+      CTHOJ_DEMO_PASSWORD: ${CTHOJ_DEMO_PASSWORD:-}
+      JUDGE_PROVIDER: ${JUDGE_PROVIDER:-mock}
+      JUDGE0_BASE_URL: ${JUDGE0_BASE_URL:-}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+    ports: ["3000:3000"]
+    volumes: ["cthoj_data:/app/data"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      minio: { condition: service_started }
+    restart: unless-stopped
+  worker:
+    build: .
+    container_name: cthoj-judge-worker
+    command: ["node", "apps/worker/src/worker.mjs"]
+    depends_on: [redis]
+    restart: unless-stopped
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cthoj
+      POSTGRES_USER: cthoj
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cthoj-development-only}
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U cthoj"], interval: 5s, timeout: 3s, retries: 10 }
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis_data:/data"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 3s, retries: 10 }
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-cthoj}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-cthoj-development-secret}
+    volumes: ["minio_data:/data"]
+volumes:
+  cthoj_data:
+  postgres_data:
+  redis_data:
+  minio_data:

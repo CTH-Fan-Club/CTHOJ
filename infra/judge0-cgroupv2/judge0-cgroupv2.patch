@@ -1,0 +1,68 @@
+diff --git a/app/jobs/isolate_job.rb b/app/jobs/isolate_job.rb
+index cadad614..27542c8c 100644
+--- a/app/jobs/isolate_job.rb
++++ b/app/jobs/isolate_job.rb
+@@ -92,7 +92,7 @@ def extract_archive
+     -w 4 \
+     -k #{Config::MAX_STACK_LIMIT} \
+     -p#{Config::MAX_MAX_PROCESSES_AND_OR_THREADS} \
+-    #{submission.enable_per_process_and_thread_time_limit ? (cgroups.present? ? "--no-cg-timing" : "") : "--cg-timing"} \
++    -n 512 \
+     #{submission.enable_per_process_and_thread_memory_limit ? "-m " : "--cg-mem="}#{Config::MAX_MEMORY_LIMIT} \
+     -f #{Config::MAX_EXTRACT_SIZE} \
+     --run \
+@@ -149,7 +149,7 @@ def compile
+     -w #{Config::MAX_WALL_TIME_LIMIT} \
+     -k #{Config::MAX_STACK_LIMIT} \
+     -p#{Config::MAX_MAX_PROCESSES_AND_OR_THREADS} \
+-    #{submission.enable_per_process_and_thread_time_limit ? (cgroups.present? ? "--no-cg-timing" : "") : "--cg-timing"} \
++    -n 512 \
+     #{submission.enable_per_process_and_thread_memory_limit ? "-m " : "--cg-mem="}#{Config::MAX_MEMORY_LIMIT} \
+     -f #{Config::MAX_MAX_FILE_SIZE} \
+     -E HOME=/tmp \
+@@ -230,7 +230,7 @@ def run
+     -w #{submission.wall_time_limit} \
+     -k #{submission.stack_limit} \
+     -p#{submission.max_processes_and_or_threads} \
+-    #{submission.enable_per_process_and_thread_time_limit ? (cgroups.present? ? "--no-cg-timing" : "") : "--cg-timing"} \
++    -n 512 \
+     #{submission.enable_per_process_and_thread_memory_limit ? "-m " : "--cg-mem="}#{submission.memory_limit} \
+     -f #{submission.max_file_size} \
+     -E HOME=/tmp \
+@@ -264,7 +264,7 @@ def verify
+
+     submission.time = metadata[:time]
+     submission.wall_time = metadata[:"time-wall"]
+-    submission.memory = (cgroups.present? ? metadata[:"cg-mem"] : metadata[:"max-rss"])
++    submission.memory = (cgroups.present? ? (metadata[:"cg-mem"] || metadata[:"max-rss"]) : metadata[:"max-rss"])
+     submission.stdout = program_stdout
+     submission.stderr = program_stderr
+     submission.exit_code = metadata[:exitcode].try(:to_i) || 0
+diff --git a/docker-entrypoint.sh b/docker-entrypoint.sh
+index 0f4e9911..968e24fe 100755
+--- a/docker-entrypoint.sh
++++ b/docker-entrypoint.sh
+@@ -1,3 +1,23 @@
+ #!/bin/bash
++set -e
++
++# Delegate the unified hierarchy to isolate v2 when the host uses cgroup v2.
++if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
++    sudo mkdir -p /sys/fs/cgroup/init
++    echo $$ | sudo tee /sys/fs/cgroup/init/cgroup.procs >/dev/null 2>&1 || true
++    for c in cpu memory pids io cpuset; do
++        if grep -qw "$c" /sys/fs/cgroup/cgroup.controllers 2>/dev/null; then
++            echo "+$c" | sudo tee /sys/fs/cgroup/cgroup.subtree_control >/dev/null 2>&1 || true
++        fi
++    done
++    sudo mkdir -p /sys/fs/cgroup/isolate
++    for c in cpu memory pids io cpuset; do
++        if grep -qw "$c" /sys/fs/cgroup/isolate/cgroup.controllers 2>/dev/null; then
++            echo "+$c" | sudo tee /sys/fs/cgroup/isolate/cgroup.subtree_control >/dev/null 2>&1 || true
++        fi
++    done
++    sudo mkdir -p /run/isolate/locks
++fi
++
+ sudo cron
+ exec "$@"

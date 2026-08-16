@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="CTH-OnlineJudge - AI 特色在线评测与算法训练平台">
+  <title>工作台 | CTHOJ</title>
+  <link rel="stylesheet" href="/styles.css?v=20260815-avatars">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <a class="brand" href="#dashboard" aria-label="CTHOJ 首页">
+        <span class="brand-mark">C</span>
+        <span><strong>CTHOJ</strong><small>CTH-OnlineJudge</small></span>
+      </a>
+      <nav id="main-nav">
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span>概览</button>
+        <button class="nav-item" data-view="problems"><span>▦</span>题库</button>
+        <button class="nav-item" data-view="submissions"><span>↗</span>提交记录</button>
+        <button class="nav-item" data-view="contests"><span>⚑</span>比赛</button>
+        <button class="nav-item" data-view="leaderboard"><span>♛</span>排行榜</button>
+      </nav>
+      <div class="nav-label">智能工具</div>
+      <nav>
+        <button class="nav-item" data-view="skills"><span>◫</span>能力画像</button>
+        <button class="nav-item admin-only" data-view="problem-admin"><span>＋</span>新增题目</button>
+        <button class="nav-item admin-only" data-view="contest-admin"><span>⚙</span>比赛管理</button>
+        <button class="nav-item admin-only" data-view="notifications-admin"><span>♢</span>通知管理</button>
+        <button class="nav-item admin-only" data-view="moderation"><span>⚖</span>内容管理</button>
+        <button class="nav-item admin-only" data-view="datalab"><span>✦</span>AI 数据实验室</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="system-line"><span class="status-dot"></span><span>API 服务正常</span></div>
+        <div class="system-line"><span class="status-dot warning"></span><span id="judge-provider">判题环境检查中</span></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" id="mobile-menu" title="打开导航">☰</button>
+        <div class="search-wrap"><span>⌕</span><input id="global-search" placeholder="搜索题目、比赛或用户" aria-label="全局搜索"><kbd>Ctrl K</kbd></div>
+        <div class="top-actions">
+          <button class="icon-button" id="theme-toggle" title="切换主题">◐</button>
+          <div class="notification-wrap">
+            <button class="icon-button" id="notification-button" title="通知" aria-label="通知" aria-expanded="false" aria-controls="notification-dropdown">♢<i id="notification-dot" hidden></i></button>
+            <div class="notification-dropdown" id="notification-dropdown" hidden></div>
+          </div>
+          <div class="user-menu-wrap">
+            <button class="user-chip" id="user-menu" aria-label="登录" aria-haspopup="menu" aria-expanded="false" aria-controls="user-dropdown">
+              <span class="avatar" id="avatar">?</span>
+              <span><strong id="user-name">访客</strong><small id="user-role">未登录</small></span>
+              <b aria-hidden="true">⌄</b>
+            </button>
+            <div class="user-dropdown" id="user-dropdown" role="menu" hidden>
+              <div class="user-dropdown-head">
+                <span class="avatar compact" id="menu-avatar">?</span>
+                <span><strong id="menu-user-name">访客</strong><small id="menu-user-handle">未登录</small></span>
+              </div>
+              <button class="user-menu-item" role="menuitem" data-user-action="profile">
+                <span class="menu-item-icon" aria-hidden="true">◎</span>
+                <span><strong>用户中心</strong><small>个人数据与最近提交</small></span>
+              </button>
+              <div class="user-menu-separator" role="separator"></div>
+              <button class="user-menu-item danger" role="menuitem" data-user-action="logout">
+                <span class="menu-item-icon" aria-hidden="true">↪</span>
+                <span><strong>退出登录</strong><small>结束当前会话</small></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="content" id="app-content" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <dialog id="auth-dialog">
+    <form method="dialog" class="dialog-panel" id="login-form">
+      <div class="dialog-head"><div><span class="eyebrow">CTH-OnlineJudge</span><h2 id="auth-title">登录到 CTHOJ</h2></div><button class="icon-button" value="cancel" title="关闭">×</button></div>
+      <label>用户名或邮箱<input name="username" autocomplete="username" required></label>
+      <label data-register-field hidden>昵称<input name="displayName" autocomplete="name" maxlength="40"></label>
+      <label data-register-field hidden>邮箱<input name="email" type="email" autocomplete="email" maxlength="120"></label>
+      <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+      <label data-register-field hidden>确认密码<input name="confirmPassword" type="password" autocomplete="new-password"></label>
+      <p class="form-error" id="login-error"></p>
+      <button class="primary-button" id="auth-submit" type="submit">登录</button>
+      <button class="text-button auth-switch" id="auth-switch" type="button">没有账号？立即注册</button>
+      <p class="form-note" id="account-note">公网实例已禁用默认 Seed 密码，请使用服务器账号。</p>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="/app.js?v=20260815-avatars"></script>
+</body>
+</html>

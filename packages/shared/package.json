@@ -1,0 +1,5 @@
+{
+  "name": "@cthoj/shared",
+  "private": true,
+  "type": "module"
+}

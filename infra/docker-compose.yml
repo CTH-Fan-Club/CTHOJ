@@ -1,0 +1,154 @@
+name: cthoj-infrastructure
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 20m
+    max-file: "3"
+
+services:
+  cthoj-postgres:
+    image: ${CTHOJ_POSTGRES_IMAGE}
+    container_name: cthoj-postgres
+    profiles: [main, all]
+    environment:
+      POSTGRES_DB: ${CTHOJ_POSTGRES_DB}
+      POSTGRES_USER: ${CTHOJ_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CTHOJ_POSTGRES_PASSWORD}
+    ports:
+      - "${CTHOJ_POSTGRES_BIND_ADDRESS}:${CTHOJ_POSTGRES_PORT}:5432"
+    volumes:
+      - cthoj-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 512m
+
+  cthoj-redis:
+    image: ${CTHOJ_REDIS_IMAGE}
+    container_name: cthoj-redis
+    profiles: [main, all]
+    environment:
+      REDIS_PASSWORD: ${CTHOJ_REDIS_PASSWORD}
+      REDIS_MAX_MEMORY: ${CTHOJ_REDIS_MAX_MEMORY}
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --appendfsync everysec --requirepass "$$REDIS_PASSWORD" --maxmemory "$$REDIS_MAX_MEMORY" --maxmemory-policy noeviction
+    ports:
+      - "${CTHOJ_REDIS_BIND_ADDRESS}:${CTHOJ_REDIS_PORT}:6379"
+    volumes:
+      - cthoj-redis-data:/data
+    healthcheck:
+      test: [CMD-SHELL, "redis-cli --no-auth-warning -a $$REDIS_PASSWORD ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 384m
+
+  judge0-db:
+    image: ${JUDGE0_POSTGRES_IMAGE}
+    container_name: judge0-db
+    profiles: [judge, all]
+    environment:
+      POSTGRES_DB: ${JUDGE0_POSTGRES_DB}
+      POSTGRES_USER: ${JUDGE0_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${JUDGE0_POSTGRES_PASSWORD}
+    volumes:
+      - judge0-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 512m
+
+  judge0-redis:
+    image: ${JUDGE0_REDIS_IMAGE}
+    container_name: judge0-redis
+    profiles: [judge, all]
+    environment:
+      REDIS_PASSWORD: ${JUDGE0_REDIS_PASSWORD}
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly no --save "" --requirepass "$$REDIS_PASSWORD" --maxmemory 192mb --maxmemory-policy noeviction
+    healthcheck:
+      test: [CMD-SHELL, "redis-cli --no-auth-warning -a $$REDIS_PASSWORD ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 256m
+
+  judge0-server:
+    image: ${JUDGE0_IMAGE}
+    build:
+      context: ./judge0-cgroupv2
+    container_name: judge0-server
+    profiles: [judge, all]
+    privileged: true
+    env_file:
+      - ./runtime/judge0.conf
+    volumes:
+      - ./runtime/judge0.conf:/judge0.conf:ro
+    ports:
+      - "${JUDGE0_BIND_ADDRESS}:${JUDGE0_PORT}:2358"
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS -H \"$${AUTHN_HEADER}: $${AUTHN_TOKEN}\" http://127.0.0.1:2358/about >/dev/null"]
+      start_period: 60s
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 768m
+
+  judge0-worker:
+    image: ${JUDGE0_IMAGE}
+    build:
+      context: ./judge0-cgroupv2
+    container_name: judge0-worker
+    profiles: [judge, all]
+    privileged: true
+    command: [bash, /cthoj/judge0-worker-entrypoint.sh]
+    env_file:
+      - ./runtime/judge0.conf
+    volumes:
+      - ./runtime/judge0.conf:/judge0.conf:ro
+      - ./judge0-worker-entrypoint.sh:/cthoj/judge0-worker-entrypoint.sh:ro
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 1536m
+    cpus: 2.0
+
+volumes:
+  cthoj-postgres-data:
+    name: cthoj-postgres-data
+  cthoj-redis-data:
+    name: cthoj-redis-data
+  judge0-postgres-data:
+    name: judge0-postgres-data
+
+networks:
+  default:
+    name: cthoj-infrastructure
