@@ -258,6 +258,17 @@ npm run lint
 npm test
 ```
 
+## 部分运行实例
+##### 增加题目功能：
+<img width="1893" height="1028" alt="QQ_1786895620112" src="https://github.com/user-attachments/assets/75b968ec-e989-4a55-93c1-bb9b7da3fbe8" />
+
+##### 数据生成：
+<img width="1494" height="776" alt="QQ_1786895817830" src="https://github.com/user-attachments/assets/5c5ce323-1095-4995-a497-3f30b0ac39d6" />
+
+<img width="1126" height="699" alt="QQ_1786895890024" src="https://github.com/user-attachments/assets/a1e5d6e6-8119-4e46-9621-2c973f52438d" />
+
+
+
 ## License
 
 [MIT](LICENSE)
