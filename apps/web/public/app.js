@@ -3,7 +3,7 @@ const authDialog = document.querySelector('#auth-dialog');
 const userMenuButton = document.querySelector('#user-menu');
 const userDropdown = document.querySelector('#user-dropdown');
 const initialHashParts = location.hash.slice(1).split('/');
-const state = { user: null, problems: [], submissions: [], notifications: [], notificationUnread: 0, view: initialHashParts[0] || 'dashboard', selectedProblem: null, selectedContest: null, selectedContestId: initialHashParts[0] === 'contest-scoreboard' ? initialHashParts[1] || null : null, activeContestId: null, health: null };
+const state = { user: null, problems: [], submissions: [], notifications: [], notificationUnread: 0, view: initialHashParts[0] || 'dashboard', selectedProblem: null, selectedContest: null, selectedContestId: initialHashParts[0] === 'contest-scoreboard' ? initialHashParts[1] || null : null, activeContestId: null };
 const defaultCheckerSource = String.raw`#include <bits/stdc++.h>
 using namespace std;
 
@@ -117,10 +117,9 @@ async function bootstrap() {
       document.querySelector('#login-form [name="username"]').value = 'demo';
       document.querySelector('#login-form [name="password"]').value = 'Demo123!';
     }
-    const [me, problems, health] = await Promise.all([api('/me'), api('/problems'), api('/health')]);
-    state.user = me.user; state.problems = problems.items; state.health = health;
+    const [me, problems] = await Promise.all([api('/me'), api('/problems')]);
+    state.user = me.user; state.problems = problems.items;
     if (state.user) { try { state.submissions = (await api('/submissions')).items; } catch { state.submissions = []; } try { const notifications = await api('/notifications'); state.notifications = notifications.items; state.notificationUnread = notifications.unread; } catch { state.notifications = []; state.notificationUnread = 0; } }
-    document.querySelector('#judge-provider').textContent = health.judgeProvider === 'judge0' ? 'Judge0 已配置' : '开发 Mock 判题';
     updateUser(); navigate(state.view);
   } catch (error) { content.innerHTML = `<div class="empty-state"><strong>CTHOJ API 暂不可用</strong>${escapeHtml(error.message)}</div>`; }
 }
